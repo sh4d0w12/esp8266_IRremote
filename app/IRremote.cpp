@@ -237,7 +237,7 @@ void space(int time) {
 	}
 }
 
-static void ir_interrupt_handler(void *param) {
+static void ir_interrupt_handler(void *arg) {
 	ETS_FRC1_INTR_DISABLE();
 	digitalWrite(IR_OUT_PIN, !digitalRead(IR_OUT_PIN));
 	ETS_FRC1_INTR_ENABLE();
@@ -254,7 +254,7 @@ void IRsend::enableIROut(int khz) {
 	ETS_FRC1_INTR_DISABLE();
 	RTC_REG_WRITE(FRC1_CTRL_ADDRESS, DIVDED_BY_16 | FRC1_ENABLE_TIMER | FRC1_AUTO_RELOAD | TM_EDGE_INT);
 	RTC_REG_WRITE(FRC1_LOAD_ADDRESS, ticks);
-	ETS_FRC_TIMER1_INTR_ATTACH(ir_interrupt_handler, NULL);
+	ETS_FRC_TIMER1_INTR_ATTACH((void *)ir_interrupt_handler, NULL);
 	TM1_EDGE_INT_ENABLE();
 }
 
