@@ -3,12 +3,13 @@
 #include "IRremoteInt.h"
 #include <SmingCore/SmingCore.h>
 
-#define IR_PIN 12 // GPIO12
+#define IRR_PIN 12 // GPIO12
+#define IRS_PIN 14 // GPIO14
 
 Timer irTimer;
 decode_results dresults;
-IRrecv irrecv(IR_PIN);
-IRsend irsend;
+IRrecv irrecv(IRR_PIN);
+IRsend irsend(IRS_PIN);
 
 void receiveIR()
 {
@@ -23,14 +24,15 @@ void receiveIR()
 		irrecv.enableIRIn();
 		irTimer.start();
 	}
+	irsend.sendSAMSUNG(0xE0E040BF, 32); // on/off
 }
 
 void init()
 {
 	Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
 	Serial.println("Setting up...");
-	irrecv.blink13(1);
+	irrecv.blink13(1); // GPIO2
 	irrecv.enableIRIn(); // Start the receiver
-	irTimer.initializeMs(1000, receiveIR).start();
+	irTimer.initializeMs(2000, receiveIR).start();
 	Serial.println("Ready...");
 }
