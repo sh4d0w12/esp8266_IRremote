@@ -8,6 +8,20 @@
 #ifndef IRremote_h
 #define IRremote_h
 
+#define FRC1_ENABLE_TIMER BIT7
+#define FRC1_AUTO_RELOAD BIT6
+
+typedef enum {
+	DIVDED_BY_1 = 0,
+	DIVDED_BY_16 = 4,
+	DIVDED_BY_256 = 8,
+} TIMER_PREDIVED_MODE;
+
+typedef enum {
+	TM_LEVEL_INT = 1,
+	TM_EDGE_INT = 0,
+} TIMER_INT_MODE;
+
 enum decode_type_t {
   NEC = 1,
   SONY = 2,

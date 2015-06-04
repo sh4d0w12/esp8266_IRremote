@@ -219,39 +219,44 @@ void IRsend::sendSAMSUNG(unsigned long data, int nbits)
   space(0);
 }
 
+
 void mark(int time) {
-  // Sends an IR mark for the specified number of microseconds.
-  bitbangOutput(time);
-}
-
-/* Leave pin off for time (given in microseconds) */
-void space(int time) {
-  // Sends an IR space for the specified number of microseconds.
-  // A space is no output
-  if (time > 0) delayMicroseconds(time);
-}
-
-void bitbangOutput(int time){
-	int loops = round(time/(cycle_duration));
-	float half_cycle = cycle_duration/2;
-	int i=0;
-	for(i=0; i<loops; i++){
-		digitalWrite(IR_OUT_PIN, HIGH); 
-		delayMicroseconds(half_cycle);
-		digitalWrite(IR_OUT_PIN, LOW); 
-		delayMicroseconds(half_cycle);
+	ETS_FRC1_INTR_ENABLE();
+	if (time > 0) {
+		delayMicroseconds(time);
 	}
 }
 
-void IRsend::enableIROut(int khz) {
-  // Enables IR output.  The khz value controls the modulation frequency in kilohertz.
-  irReadTimer.stop(); //TODO: Maybe this shouldn't be here
-  
-  pinMode(IR_OUT_PIN, OUTPUT);
-  digitalWrite(IR_OUT_PIN, LOW); // When not sending, we want it low
-  cycle_duration=(float)1000/khz;
+void space(int time) {
+	ETS_FRC1_INTR_DISABLE();
+	if (time > 0) {
+		delayMicroseconds(time);
+	}
+	if (time == 0) {
+		digitalWrite(IR_OUT_PIN, 0);
+	}
 }
 
+static void ir_interrupt_handler(void *param) {
+	ETS_FRC1_INTR_DISABLE();
+	digitalWrite(IR_OUT_PIN, !digitalRead(IR_OUT_PIN));
+	ETS_FRC1_INTR_ENABLE();
+}
+
+void IRsend::enableIROut(int khz) {
+
+	pinMode(IR_OUT_PIN, OUTPUT);
+	digitalWrite(IR_OUT_PIN, 0);
+
+	int hz = khz * 1000;
+	uint32_t ticks = CPU_CLK_FREQ / 16 / hz / 2;
+
+	ETS_FRC1_INTR_DISABLE();
+	RTC_REG_WRITE(FRC1_CTRL_ADDRESS, DIVDED_BY_16 | FRC1_ENABLE_TIMER | FRC1_AUTO_RELOAD | TM_EDGE_INT);
+	RTC_REG_WRITE(FRC1_LOAD_ADDRESS, ticks);
+	ETS_FRC_TIMER1_INTR_ATTACH(ir_interrupt_handler, NULL);
+	TM1_EDGE_INT_ENABLE();
+}
 
 // ---------------------------------------------------------------
 
