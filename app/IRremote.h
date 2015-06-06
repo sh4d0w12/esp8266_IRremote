@@ -8,6 +8,20 @@
 #ifndef IRremote_h
 #define IRremote_h
 
+#define FRC1_ENABLE_TIMER BIT7
+#define FRC1_AUTO_RELOAD BIT6
+
+typedef enum {
+	DIVDED_BY_1 = 0,
+	DIVDED_BY_16 = 4,
+	DIVDED_BY_256 = 8,
+} TIMER_PREDIVED_MODE;
+
+typedef enum {
+	TM_LEVEL_INT = 1,
+	TM_EDGE_INT = 0,
+} TIMER_INT_MODE;
+
 enum decode_type_t {
   NEC = 1,
   SONY = 2,
@@ -65,13 +79,13 @@ public:
 class IRrecv
 {
 public:
-  IRrecv(int recvpin);
-  void blink13(int blinkflag);
+  IRrecv(uint8_t recvpin);
+  void blink(int blinkflag, int ledpin = 0);
   int decode(decode_results *results);
   void enableIRIn();
   void disableIRIn();
   void resume();
-  private:
+private:
   // These are called by decode
   int getRClevel(decode_results *results, int *offset, int *used, int t1);
   long decodeNEC(decode_results *results);
@@ -93,7 +107,7 @@ public:
 class IRsend
 {
 public:
-  IRsend() {}
+  IRsend(uint8_t sendpin);
   void sendWhynter(unsigned long data, int nbits);
   void sendNEC(unsigned long data, int nbits);
   void sendSony(unsigned long data, int nbits);
@@ -108,14 +122,13 @@ public:
   void sendSharpRaw(unsigned long data, int nbits);
   void sendPanasonic(unsigned int address, unsigned long data);
   void sendJVC(unsigned long data, int nbits, int repeat); // *Note instead of sending the REPEAT constant if you want the JVC repeat signal sent, send the original code value and change the repeat argument from 0 to 1. JVC protocol repeats by skipping the header NOT by sending a separate code value like NEC does.
-  // private:
   void sendSAMSUNG(unsigned long data, int nbits);
+private:
   void enableIROut(int khz);
-} ;
+  void mark(int usec);
+  void space(int usec);
+};
 
-void mark(int usec);
-void space(int usec);
-void bitbangOutput(int time);
 // Some useful constants
 
 #define USECPERTICK 50  // microseconds per clock interrupt tick

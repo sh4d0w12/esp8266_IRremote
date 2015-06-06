@@ -1,36 +1,48 @@
 #include <user_config.h>
 #include "IRremote.h"
-#include "IRremoteInt.h"
 #include <SmingCore/SmingCore.h>
 
-#define IR_PIN 12 // GPIO12
+#define IRR_PIN 5 // GPIO5
+#define IRS_PIN 4 // GPIO4
+#define LED_PIN 2 // GPIO2
 
 Timer irTimer;
-decode_results dresults;
-IRrecv irrecv(IR_PIN);
-IRsend irsend;
+decode_results results;
+IRrecv irrecv(IRR_PIN);
+IRsend irsend(IRS_PIN);
 
-void receiveIR()
+void dump(decode_results *results)
 {
-	if(irrecv.decode(&dresults)==DECODED){
-		irTimer.stop();
-		unsigned int * sendbuff = new unsigned int[dresults.rawlen-1];
-		for(int i=0; i<dresults.rawlen-1; i++){
-			sendbuff[i]=dresults.rawbuf[i+1]*50;
-		}
-		irsend.sendNEC(dresults.value, dresults.bits);
-		Serial.println("Sent NEC");
-		irrecv.enableIRIn();
-		irTimer.start();
+	Serial.print("type: ");
+	Serial.print(results->decode_type);
+	Serial.print(" hex: 0x");
+	Serial.print(results->value, HEX);
+	Serial.print(" dec: ");
+	Serial.print(results->value, DEC);
+	Serial.print(" bits: ");
+	Serial.print(results->bits, DEC);
+	Serial.println();
+}
+
+void loop()
+{
+
+	if (irrecv.decode(&results))
+	{
+		dump(&results);
+		irrecv.resume();
+		Serial.println("send mute to samsung");
+		irsend.sendSAMSUNG(0xE0E0F00F, 32);
 	}
+	irTimer.startOnce();
 }
 
 void init()
 {
-	Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
+	System.setCpuFrequency(eCF_160MHz);
+	Serial.begin(SERIAL_BAUD_RATE);
 	Serial.println("Setting up...");
-	irrecv.blink13(1);
-	irrecv.enableIRIn(); // Start the receiver
-	irTimer.initializeMs(1000, receiveIR).start();
-	Serial.println("Ready...");
+	irrecv.blink(true, LED_PIN);
+	irrecv.enableIRIn();
+	irTimer.initializeMs(1000, loop).startOnce();
 }

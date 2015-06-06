@@ -14,9 +14,14 @@ int MATCH_SPACE(int measured_ticks, int desired_us) {return MATCH(measured_ticks
 
 Timer irReadTimer;
 volatile irparams_t irparams;
-float cycle_duration; // The duration of one cycle in us
+//float cycle_duration; // The duration of one cycle in us
 
 // IRsend -----------------------------------------------------------------------------------
+
+IRsend::IRsend(uint8_t sendpin) {
+	irparams.sendpin = sendpin;
+}
+
 void IRsend::sendNEC(unsigned long data, int nbits)
 {
   enableIROut(38);
@@ -219,37 +224,48 @@ void IRsend::sendSAMSUNG(unsigned long data, int nbits)
   space(0);
 }
 
-void mark(int time) {
-  // Sends an IR mark for the specified number of microseconds.
-  bitbangOutput(time);
-}
-
-/* Leave pin off for time (given in microseconds) */
-void space(int time) {
-  // Sends an IR space for the specified number of microseconds.
-  // A space is no output
-  if (time > 0) delayMicroseconds(time);
-}
-
-void bitbangOutput(int time){
-	int loops = round(time/(cycle_duration));
-	float half_cycle = cycle_duration/2;
-	int i=0;
-	for(i=0; i<loops; i++){
-		digitalWrite(IR_OUT_PIN, HIGH); 
-		delayMicroseconds(half_cycle);
-		digitalWrite(IR_OUT_PIN, LOW); 
-		delayMicroseconds(half_cycle);
+void IRsend::mark(int time)
+{
+	ETS_FRC1_INTR_ENABLE();
+	if (time > 0)
+	{
+		delayMicroseconds(time);
 	}
 }
 
-void IRsend::enableIROut(int khz) {
-  // Enables IR output.  The khz value controls the modulation frequency in kilohertz.
-  irReadTimer.stop(); //TODO: Maybe this shouldn't be here
-  
-  pinMode(IR_OUT_PIN, OUTPUT);
-  digitalWrite(IR_OUT_PIN, LOW); // When not sending, we want it low
-  cycle_duration=(float)1000/khz;
+void IRsend::space(int time)
+{
+	ETS_FRC1_INTR_DISABLE();
+	if (time > 0)
+	{
+		delayMicroseconds(time);
+	}
+	if (time == 0)
+	{
+		digitalWrite(irparams.sendpin, LOW);
+	}
+}
+
+void irsend_interrupt_handler(void *arg)
+{
+	ETS_FRC1_INTR_DISABLE();
+	digitalWrite(irparams.sendpin, !digitalRead(irparams.sendpin));
+	ETS_FRC1_INTR_ENABLE();
+}
+
+void IRsend::enableIROut(int khz)
+{
+	pinMode(irparams.sendpin, OUTPUT);
+	digitalWrite(irparams.sendpin, LOW);
+
+	uint32_t hz = khz * 1000;
+	uint32_t ticks = CPU_CLK_FREQ / 16 / hz / 2;
+
+	ETS_FRC1_INTR_DISABLE();
+	RTC_REG_WRITE(FRC1_CTRL_ADDRESS, DIVDED_BY_16 | FRC1_ENABLE_TIMER | FRC1_AUTO_RELOAD | TM_LEVEL_INT);
+	RTC_REG_WRITE(FRC1_LOAD_ADDRESS, ticks);
+	ETS_FRC_TIMER1_INTR_ATTACH((void *)irsend_interrupt_handler, this);
+	TM1_EDGE_INT_ENABLE();
 }
 
 
@@ -320,18 +336,18 @@ void readIR()
     break;
   }
 
-  if (irparams.blinkflag) {
+  if (irparams.blinkflag && irparams.ledpin) {
     if (irdata == MARK) {
-      BLINKLED_ON();  // turn pin 13 LED on
+      digitalWrite(irparams.ledpin, HIGH);	// turn LED on
     } 
     else {
-      BLINKLED_OFF();  // turn pin 13 LED off
+    	digitalWrite(irparams.ledpin, LOW);	// turn LED off
     }
   }
 }
 
 
-IRrecv::IRrecv(int recvpin)
+IRrecv::IRrecv(uint8_t recvpin)
 {
   irparams.recvpin = recvpin;
   irparams.blinkflag = 0;
@@ -353,12 +369,13 @@ void IRrecv::disableIRIn(){
 	irReadTimer.stop();
 }
 
-// enable/disable blinking of pin 13 on IR processing
-void IRrecv::blink13       (int blinkflag)
+// enable/disable blinking of ledpin on IR processing
+void IRrecv::blink(int blinkflag, int ledpin)
 {
   irparams.blinkflag = blinkflag;
-  if (blinkflag)
-    pinMode(LED_PIN, OUTPUT);
+  irparams.ledpin = ledpin;
+  if (blinkflag && ledpin)
+    pinMode(irparams.ledpin, OUTPUT);
 }
 
 void IRrecv::resume() {
