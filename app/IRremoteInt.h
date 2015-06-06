@@ -8,10 +8,10 @@
 #ifndef IRremoteint_h
 #define IRremoteint_h
 
-#define LED_PIN 2 // GPIO2
-#define IR_OUT_PIN 13 // GPIO13
-#define BLINKLED_ON()  (digitalWrite(LED_PIN, HIGH))
-#define BLINKLED_OFF() (digitalWrite(LED_PIN, LOW))
+//#define LED_PIN 2 // GPIO2
+//#define IR_OUT_PIN 13 // GPIO13
+//#define BLINKLED_ON()  (digitalWrite(LED_PIN, HIGH))
+//#define BLINKLED_OFF() (digitalWrite(LED_PIN, LOW))
 
 
 // Pulse parms are *50-100 for the Mark and *50+100 for the space
@@ -135,10 +135,12 @@
 typedef struct {
   uint8_t recvpin;           // pin for IR data from detector
   uint8_t rcvstate;          // state machine
-  uint8_t blinkflag;         // TRUE to enable blinking of pin 13 on IR processing
+  uint8_t blinkflag;         // TRUE to enable blinking of ledpin on IR processing
   unsigned int timer;     // state timer, counts 50uS ticks.
   unsigned int rawbuf[RAWBUF]; // raw data
   uint8_t rawlen;         // counter of entries in rawbuf
+  uint8_t sendpin;
+  uint8_t ledpin;
 } 
 irparams_t;
 

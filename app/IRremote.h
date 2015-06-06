@@ -79,8 +79,8 @@ public:
 class IRrecv
 {
 public:
-  IRrecv(int recvpin);
-  void blink13(int blinkflag);
+  IRrecv(uint8_t recvpin);
+  void blink(int blinkflag, int ledpin = 0);
   int decode(decode_results *results);
   void enableIRIn();
   void disableIRIn();
@@ -107,7 +107,7 @@ private:
 class IRsend
 {
 public:
-  IRsend(uint16_t sendpin);
+  IRsend(uint8_t sendpin);
   void sendWhynter(unsigned long data, int nbits);
   void sendNEC(unsigned long data, int nbits);
   void sendSony(unsigned long data, int nbits);
@@ -123,8 +123,6 @@ public:
   void sendPanasonic(unsigned int address, unsigned long data);
   void sendJVC(unsigned long data, int nbits, int repeat); // *Note instead of sending the REPEAT constant if you want the JVC repeat signal sent, send the original code value and change the repeat argument from 0 to 1. JVC protocol repeats by skipping the header NOT by sending a separate code value like NEC does.
   void sendSAMSUNG(unsigned long data, int nbits);
-
-  uint16_t sendpin;
 private:
   void enableIROut(int khz);
   void mark(int usec);
